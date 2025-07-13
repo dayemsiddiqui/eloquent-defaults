@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace dayemsiddiqui\EloquentDefaults\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class EloquentDefaultsCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'eloquent-defaults';
 
     public $description = 'My command';
 

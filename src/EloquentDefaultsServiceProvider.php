@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton;
+namespace dayemsiddiqui\EloquentDefaults;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use VendorName\Skeleton\Commands\SkeletonCommand;
+use dayemsiddiqui\EloquentDefaults\Commands\EloquentDefaultsCommand;
 
-class SkeletonServiceProvider extends PackageServiceProvider
+class EloquentDefaultsServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
@@ -16,10 +16,10 @@ class SkeletonServiceProvider extends PackageServiceProvider
          * More info: https://github.com/spatie/laravel-package-tools
          */
         $package
-            ->name('skeleton')
+            ->name('eloquent-defaults')
             ->hasConfigFile()
             ->hasViews()
-            ->hasMigration('create_migration_table_name_table')
-            ->hasCommand(SkeletonCommand::class);
+            ->hasMigration('create_eloquent_defaults_table')
+            ->hasCommand(EloquentDefaultsCommand::class);
     }
 }
