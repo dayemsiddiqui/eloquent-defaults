@@ -65,11 +65,11 @@ class Setting extends Model
 it('can register models with HasEloquentDefaults trait', function () {
     // Create temporary model files and use auto-discovery
     $testDir = createEloquentDefaultsTestModelFiles();
-    
+
     // Load the model files so they're available for reflection
-    require_once $testDir . '/TestPlan.php';
-    require_once $testDir . '/TestSetting.php';
-    
+    require_once $testDir.'/TestPlan.php';
+    require_once $testDir.'/TestSetting.php';
+
     // Use auto-discovery instead of manual calls
     $scanner = app(ModelScannerService::class);
     $scanner->setScanDirectories([$testDir]);
@@ -98,11 +98,11 @@ it('can create default models when target is created', function () {
 
     // Create temporary model files and use auto-discovery
     $testDir = createEloquentDefaultsTestModelFiles();
-    
+
     // Load the model files so they're available for reflection
-    require_once $testDir . '/TestPlan.php';
-    require_once $testDir . '/TestSetting.php';
-    
+    require_once $testDir.'/TestPlan.php';
+    require_once $testDir.'/TestSetting.php';
+
     // Use auto-discovery instead of manual calls
     $scanner = app(ModelScannerService::class);
     $scanner->setScanDirectories([$testDir]);
@@ -180,11 +180,11 @@ it('validates that eloquentDefaults returns array of models', function () {
 it('can debug registrations', function () {
     // Create temporary model files and use auto-discovery
     $testDir = createEloquentDefaultsTestModelFiles();
-    
+
     // Load the model files so they're available for reflection
-    require_once $testDir . '/TestPlan.php';
-    require_once $testDir . '/TestSetting.php';
-    
+    require_once $testDir.'/TestPlan.php';
+    require_once $testDir.'/TestSetting.php';
+
     // Use auto-discovery instead of manual calls
     $scanner = app(ModelScannerService::class);
     $scanner->setScanDirectories([$testDir]);
@@ -250,14 +250,14 @@ function createInvalidTable()
 
 function createEloquentDefaultsTestModelFiles(): string
 {
-    $testDir = sys_get_temp_dir() . '/eloquent-defaults-main-test-models';
-    
-    if (!File::isDirectory($testDir)) {
+    $testDir = sys_get_temp_dir().'/eloquent-defaults-main-test-models';
+
+    if (! File::isDirectory($testDir)) {
         File::makeDirectory($testDir, 0755, true);
     }
-    
+
     // Create TestPlan (provider model)
-    File::put($testDir . '/TestPlan.php', '<?php
+    File::put($testDir.'/TestPlan.php', '<?php
 namespace Tests\EloquentDefaults;
 use Illuminate\Database\Eloquent\Model;
 use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
@@ -279,7 +279,7 @@ class TestPlan extends Model
 }');
 
     // Create TestSetting (provider model)
-    File::put($testDir . '/TestSetting.php', '<?php
+    File::put($testDir.'/TestSetting.php', '<?php
 namespace Tests\EloquentDefaults;
 use Illuminate\Database\Eloquent\Model;
 use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
@@ -299,14 +299,14 @@ class TestSetting extends Model
         ];
     }
 }');
-    
+
     return $testDir;
 }
 
 function cleanupEloquentDefaultsTestModelFiles(): void
 {
-    $testDir = sys_get_temp_dir() . '/eloquent-defaults-main-test-models';
-    
+    $testDir = sys_get_temp_dir().'/eloquent-defaults-main-test-models';
+
     if (File::isDirectory($testDir)) {
         File::deleteDirectory($testDir);
     }

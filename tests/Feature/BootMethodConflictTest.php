@@ -269,10 +269,10 @@ it('handles models with boot method that does not call parent boot', function ()
 
     // Create temporary model files and use auto-discovery
     $testDir = createBootTestModelFiles();
-    
+
     // Load the model files so they're available for reflection
-    require_once $testDir . '/TestEquipment.php';
-    
+    require_once $testDir.'/TestEquipment.php';
+
     // Use auto-discovery instead of manual calls
     $scanner = app(ModelScannerService::class);
     $scanner->setScanDirectories([$testDir]);
@@ -509,7 +509,7 @@ class TestClinicSetting extends Model
 }');
 
     // Create TestEquipment (provider model for BadBootClinic)
-    File::put($testDir . '/TestEquipment.php', '<?php
+    File::put($testDir.'/TestEquipment.php', '<?php
 namespace Tests\BootConflict;
 use Illuminate\Database\Eloquent\Model;
 use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
