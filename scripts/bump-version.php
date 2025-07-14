@@ -1,23 +1,25 @@
 #!/usr/bin/env php
 <?php
 
-function getCurrentVersion() {
+function getCurrentVersion()
+{
     $output = shell_exec('git tag --sort=-version:refname | head -1');
     $version = trim($output);
-    
+
     if (empty($version)) {
         return '0.0.0';
     }
-    
+
     return ltrim($version, 'v');
 }
 
-function bumpVersion($currentVersion, $type) {
+function bumpVersion($currentVersion, $type)
+{
     $parts = explode('.', $currentVersion);
-    $major = (int)$parts[0];
-    $minor = (int)$parts[1];
-    $patch = (int)$parts[2];
-    
+    $major = (int) $parts[0];
+    $minor = (int) $parts[1];
+    $patch = (int) $parts[2];
+
     switch ($type) {
         case 'major':
             $major++;
@@ -33,11 +35,12 @@ function bumpVersion($currentVersion, $type) {
             $patch++;
             break;
     }
-    
+
     return "$major.$minor.$patch";
 }
 
-function showUsage() {
+function showUsage()
+{
     echo "Usage: php scripts/bump-version.php [--major|--minor|--patch] [--no-release]\n";
     echo "       composer run bump-version [-- --major|--minor|--patch] [-- --no-release]\n";
     echo "\n";
@@ -49,14 +52,15 @@ function showUsage() {
     echo "  --help        Show this help message\n";
 }
 
-function executeCommand($command, $description = '') {
-    echo ($description ? "→ $description\n" : '') . "  Running: $command\n";
-    $output = shell_exec($command . ' 2>&1');
-    
+function executeCommand($command, $description = '')
+{
+    echo ($description ? "→ $description\n" : '')."  Running: $command\n";
+    $output = shell_exec($command.' 2>&1');
+
     if ($output) {
-        echo "  " . str_replace("\n", "\n  ", trim($output)) . "\n";
+        echo '  '.str_replace("\n", "\n  ", trim($output))."\n";
     }
-    
+
     return $output;
 }
 
@@ -85,7 +89,7 @@ if ($showHelp) {
 }
 
 // Check if we're in a git repository
-if (!is_dir('.git')) {
+if (! is_dir('.git')) {
     echo "Error: Not in a git repository\n";
     exit(1);
 }
@@ -107,7 +111,7 @@ if ($createRelease) {
 }
 echo "\nContinue? (y/N): ";
 
-$handle = fopen("php://stdin", "r");
+$handle = fopen('php://stdin', 'r');
 $confirmation = trim(fgets($handle));
 fclose($handle);
 
@@ -120,7 +124,7 @@ echo "\n";
 
 // Create and push tag
 executeCommand("git tag v$newVersion", "Creating tag v$newVersion");
-executeCommand("git push origin v$newVersion", "Pushing tag to origin");
+executeCommand("git push origin v$newVersion", 'Pushing tag to origin');
 
 // Create GitHub release if requested
 if ($createRelease) {
@@ -131,12 +135,12 @@ if ($createRelease) {
         echo "   Install with: brew install gh\n";
     } else {
         echo "\n";
-        executeCommand("gh release create v$newVersion --generate-notes", "Creating GitHub release");
+        executeCommand("gh release create v$newVersion --generate-notes", 'Creating GitHub release');
     }
 }
 
 echo "\n✅ Version bumped to v$newVersion and pushed to origin!\n";
-if ($createRelease && !empty($ghOutput)) {
+if ($createRelease && ! empty($ghOutput)) {
     echo "✅ GitHub release created!\n";
 }
 echo "The new version should be available on Packagist shortly.\n";

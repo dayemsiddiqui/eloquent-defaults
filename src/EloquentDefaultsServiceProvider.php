@@ -4,6 +4,7 @@ namespace dayemsiddiqui\EloquentDefaults;
 
 use dayemsiddiqui\EloquentDefaults\Commands\EloquentDefaultsCommand;
 use dayemsiddiqui\EloquentDefaults\Services\ModelDiscoveryService;
+use dayemsiddiqui\EloquentDefaults\Services\ModelScannerService;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -28,6 +29,12 @@ class EloquentDefaultsServiceProvider extends PackageServiceProvider
     {
         $this->app->singleton(ModelDiscoveryService::class);
 
+        $this->app->singleton(ModelScannerService::class, function ($app) {
+            return new ModelScannerService(
+                $app->make(ModelDiscoveryService::class)
+            );
+        });
+
         $this->app->singleton(EloquentDefaults::class, function ($app) {
             return new EloquentDefaults(
                 $app->make(ModelDiscoveryService::class)
@@ -37,7 +44,14 @@ class EloquentDefaultsServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
-        // Models with HasEloquentDefaults trait will automatically register themselves
-        // during their boot process, so no additional setup is needed here
+        // Perform auto-discovery of models with HasEloquentDefaults trait
+        $scanner = $this->app->make(ModelScannerService::class);
+
+        if ($scanner->isAutoDiscoveryEnabled()) {
+            $scanner->discoverAndRegisterModels();
+        }
+
+        // Models with HasEloquentDefaults trait will also register themselves
+        // during their boot process as a fallback mechanism
     }
 }

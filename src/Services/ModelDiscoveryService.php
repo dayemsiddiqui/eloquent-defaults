@@ -16,8 +16,8 @@ class ModelDiscoveryService
             $this->eloquentDefaultsRegistry[$targetModelClass] = [];
         }
 
-        // Prevent duplicate registrations
-        if (! in_array($providerModelClass, $this->eloquentDefaultsRegistry[$targetModelClass])) {
+        // Only add to registry if provider class is not empty
+        if ($providerModelClass && ! in_array($providerModelClass, $this->eloquentDefaultsRegistry[$targetModelClass])) {
             $this->eloquentDefaultsRegistry[$targetModelClass][] = $providerModelClass;
 
             // TODO: Implement circular dependency detection

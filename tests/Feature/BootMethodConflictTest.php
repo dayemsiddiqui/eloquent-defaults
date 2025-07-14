@@ -1,11 +1,13 @@
 <?php
 
+use dayemsiddiqui\EloquentDefaults\Services\ModelScannerService;
 use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
@@ -14,10 +16,16 @@ beforeEach(function () {
     app(\dayemsiddiqui\EloquentDefaults\Services\ModelDiscoveryService::class)->clearCache();
 });
 
+afterEach(function () {
+    // Clean up any created test model files
+    cleanupBootTestModelFiles();
+});
+
 // Test model: Company (target model)
 class Company extends Model
 {
     protected $fillable = ['name'];
+
     protected $table = 'companies';
 }
 
@@ -25,8 +33,9 @@ class Company extends Model
 class Clinic extends Model
 {
     protected $fillable = ['name', 'company_id'];
+
     protected $table = 'clinics';
-    
+
     // Track if existing functionality was called
     public static $defaultMethodsCalled = [];
 
@@ -43,7 +52,7 @@ class Clinic extends Model
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-            
+
             DB::table('soap_templates')->insert([
                 'clinic_id' => $clinic->id,
                 'name' => 'Default Template',
@@ -65,6 +74,7 @@ class Patient extends Model
     use HasEloquentDefaults;
 
     protected $fillable = ['name', 'clinic_id'];
+
     protected $table = 'patients';
 
     protected static function eloquentDefaults(Clinic $clinic): array
@@ -76,12 +86,13 @@ class Patient extends Model
     }
 }
 
-// Test model: Staff provider with HasEloquentDefaults  
+// Test model: Staff provider with HasEloquentDefaults
 class Staff extends Model
 {
     use HasEloquentDefaults;
 
     protected $fillable = ['name', 'clinic_id'];
+
     protected $table = 'staff';
 
     protected static function eloquentDefaults(Clinic $clinic): array
@@ -96,8 +107,9 @@ class Staff extends Model
 class AdvancedClinic extends Model
 {
     protected $fillable = ['name'];
+
     protected $table = 'advanced_clinics';
-    
+
     public static $eventOrder = [];
 
     protected static function boot()
@@ -125,6 +137,7 @@ class ClinicSetting extends Model
     use HasEloquentDefaults;
 
     protected $fillable = ['key', 'value', 'clinic_id'];
+
     protected $table = 'clinic_settings';
 
     protected static function eloquentDefaults(AdvancedClinic $clinic): array
@@ -140,14 +153,15 @@ class ClinicSetting extends Model
 class BadBootClinic extends Model
 {
     protected $fillable = ['name'];
+
     protected $table = 'bad_boot_clinics';
-    
+
     public static $customBootCalled = false;
 
     protected static function boot()
     {
         // Intentionally NOT calling parent::boot() to test edge case
-        
+
         static::created(function ($clinic) {
             static::$customBootCalled = true;
         });
@@ -160,6 +174,7 @@ class Equipment extends Model
     use HasEloquentDefaults;
 
     protected $fillable = ['name', 'clinic_id'];
+
     protected $table = 'equipment';
 
     protected static function eloquentDefaults(BadBootClinic $clinic): array
@@ -172,48 +187,64 @@ class Equipment extends Model
 
 it('works with models that have existing boot method and created listeners', function () {
     createTablesForBootTests();
-    
+
     // Reset tracking
     Clinic::$defaultMethodsCalled = [];
-    
-    // Manually trigger boot for models with HasEloquentDefaults
-    Patient::bootHasEloquentDefaults();
-    Staff::bootHasEloquentDefaults();
+
+    // Create temporary model files and use auto-discovery
+    $testDir = createBootTestModelFiles();
+
+    // Load the model files so they're available for reflection
+    require_once $testDir.'/TestPatient.php';
+    require_once $testDir.'/TestStaff.php';
+
+    // Use auto-discovery instead of manual calls
+    $scanner = app(ModelScannerService::class);
+    $scanner->setScanDirectories([$testDir]);
+    $scanner->discoverAndRegisterModels();
 
     // Create a clinic - should trigger both existing functionality and defaults
     $clinic = Clinic::create(['name' => 'Test Clinic']);
 
     // Verify existing functionality still works
     expect(Clinic::$defaultMethodsCalled)->toContain('appointment_types', 'soap_templates');
-    
+
     // Verify appointment types were created
     $appointmentTypes = DB::table('appointment_types')->where('clinic_id', $clinic->id)->get();
     expect($appointmentTypes)->toHaveCount(1);
     expect($appointmentTypes->first()->name)->toBe('General Consultation');
-    
+
     // Verify soap templates were created
     $soapTemplates = DB::table('soap_templates')->where('clinic_id', $clinic->id)->get();
     expect($soapTemplates)->toHaveCount(1);
     expect($soapTemplates->first()->name)->toBe('Default Template');
 
     // Verify eloquent defaults were created
-    $patients = Patient::where('clinic_id', $clinic->id)->get();
+    $patients = DB::table('patients')->where('clinic_id', $clinic->id)->get();
     expect($patients)->toHaveCount(2);
     expect($patients->pluck('name')->toArray())->toBe(['Test Patient 1', 'Test Patient 2']);
 
-    $staff = Staff::where('clinic_id', $clinic->id)->get();
+    $staff = DB::table('staff')->where('clinic_id', $clinic->id)->get();
     expect($staff)->toHaveCount(1);
     expect($staff->first()->name)->toBe('Default Admin');
 });
 
 it('works with models that have multiple existing event listeners', function () {
     createTablesForBootTests();
-    
+
     // Reset tracking
     AdvancedClinic::$eventOrder = [];
-    
-    // Manually trigger boot for models with HasEloquentDefaults
-    ClinicSetting::bootHasEloquentDefaults();
+
+    // Create temporary model files and use auto-discovery
+    $testDir = createBootTestModelFiles();
+
+    // Load the model files so they're available for reflection
+    require_once $testDir.'/TestClinicSetting.php';
+
+    // Use auto-discovery instead of manual calls
+    $scanner = app(ModelScannerService::class);
+    $scanner->setScanDirectories([$testDir]);
+    $scanner->discoverAndRegisterModels();
 
     // Create an advanced clinic
     $clinic = AdvancedClinic::create(['name' => 'Advanced Test Clinic']);
@@ -224,7 +255,7 @@ it('works with models that have multiple existing event listeners', function () 
     expect(AdvancedClinic::$eventOrder)->toContain('saved_listener');
 
     // Verify eloquent defaults were created
-    $settings = ClinicSetting::where('clinic_id', $clinic->id)->get();
+    $settings = DB::table('clinic_settings')->where('clinic_id', $clinic->id)->get();
     expect($settings)->toHaveCount(2);
     expect($settings->pluck('key')->toArray())->toBe(['theme', 'locale']);
     expect($settings->pluck('value')->toArray())->toBe(['light', 'en']);
@@ -232,10 +263,10 @@ it('works with models that have multiple existing event listeners', function () 
 
 it('handles models with boot method that does not call parent boot', function () {
     createTablesForBootTests();
-    
+
     // Reset tracking
     BadBootClinic::$customBootCalled = false;
-    
+
     // Manually trigger boot for models with HasEloquentDefaults
     Equipment::bootHasEloquentDefaults();
 
@@ -244,44 +275,60 @@ it('handles models with boot method that does not call parent boot', function ()
     expect(function () {
         BadBootClinic::create(['name' => 'Bad Boot Clinic']);
     })->toThrow(ErrorException::class);
-    
+
     // If we get here, verify the custom boot was attempted
     expect(BadBootClinic::$customBootCalled)->toBe(false); // It never gets called due to the error
 });
 
 it('verifies event registration order and compatibility', function () {
     createTablesForBootTests();
-    
+
     // Track the order of operations
     $eventLog = [];
-    
+
     // Add a custom event listener to track order
     Clinic::created(function ($clinic) use (&$eventLog) {
         $eventLog[] = 'custom_listener_after_registration';
     });
-    
-    // Manually trigger boot for models with HasEloquentDefaults
-    Patient::bootHasEloquentDefaults();
-    
+
+    // Create temporary model files and use auto-discovery
+    $testDir = createBootTestModelFiles();
+
+    // Load the model files so they're available for reflection
+    require_once $testDir.'/TestPatient.php';
+
+    // Use auto-discovery instead of manual calls
+    $scanner = app(ModelScannerService::class);
+    $scanner->setScanDirectories([$testDir]);
+    $scanner->discoverAndRegisterModels();
+
     // Create clinic
     $clinic = Clinic::create(['name' => 'Event Order Test Clinic']);
-    
+
     // Verify all expected functionality occurred
     expect(Clinic::$defaultMethodsCalled)->not()->toBeEmpty();
-    expect(Patient::where('clinic_id', $clinic->id)->count())->toBe(2);
+    expect(DB::table('patients')->where('clinic_id', $clinic->id)->count())->toBe(2);
 });
 
 it('validates that trait boot methods are called when parent boot is called', function () {
     createTablesForBootTests();
-    
-    // This test ensures that calling parent::boot() properly triggers trait boot methods
-    Patient::bootHasEloquentDefaults();
-    
+
+    // Create temporary model files and use auto-discovery
+    $testDir = createBootTestModelFiles();
+
+    // Load the model files so they're available for reflection
+    require_once $testDir.'/TestPatient.php';
+
+    // Use auto-discovery instead of manual calls
+    $scanner = app(ModelScannerService::class);
+    $scanner->setScanDirectories([$testDir]);
+    $scanner->discoverAndRegisterModels();
+
     $discoveryService = app(\dayemsiddiqui\EloquentDefaults\Services\ModelDiscoveryService::class);
     $providers = $discoveryService->getEloquentDefaultsProviders(Clinic::class);
-    
-    // Verify registration happened (meaning boot was called)
-    expect($providers)->toContain(Patient::class);
+
+    // Verify registration happened (meaning auto-discovery worked)
+    expect($providers)->toContain('Tests\\BootConflict\\TestPatient');
 });
 
 // Helper function to create test tables
@@ -376,4 +423,91 @@ function createTablesForBootTests()
         $table->text('template');
         $table->timestamps();
     });
+}
+
+// Helper functions for auto-discovery tests
+
+function createBootTestModelFiles(): string
+{
+    $testDir = sys_get_temp_dir().'/eloquent-defaults-boot-test-models';
+
+    if (! File::isDirectory($testDir)) {
+        File::makeDirectory($testDir, 0755, true);
+    }
+
+    // Create TestPatient (provider model)
+    File::put($testDir.'/TestPatient.php', '<?php
+namespace Tests\BootConflict;
+use Illuminate\Database\Eloquent\Model;
+use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
+
+class TestPatient extends Model
+{
+    use HasEloquentDefaults;
+    
+    protected $table = "patients";
+    protected $fillable = ["name", "clinic_id"];
+    
+    protected static function eloquentDefaults(\\Clinic $clinic): array
+    {
+        return [
+            static::make(["name" => "Test Patient 1", "clinic_id" => $clinic->id]),
+            static::make(["name" => "Test Patient 2", "clinic_id" => $clinic->id]),
+        ];
+    }
+}');
+
+    // Create TestStaff (provider model)
+    File::put($testDir.'/TestStaff.php', '<?php
+namespace Tests\BootConflict;
+use Illuminate\Database\Eloquent\Model;
+use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
+
+class TestStaff extends Model
+{
+    use HasEloquentDefaults;
+    
+    protected $table = "staff";
+    protected $fillable = ["name", "clinic_id"];
+    
+    protected static function eloquentDefaults(\\Clinic $clinic): array
+    {
+        return [
+            static::make(["name" => "Default Admin", "clinic_id" => $clinic->id]),
+        ];
+    }
+}');
+
+    // Create TestClinicSetting (provider model for AdvancedClinic)
+    File::put($testDir.'/TestClinicSetting.php', '<?php
+namespace Tests\BootConflict;
+use Illuminate\Database\Eloquent\Model;
+use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
+
+class TestClinicSetting extends Model
+{
+    use HasEloquentDefaults;
+    
+    protected $table = "clinic_settings";
+    protected $fillable = ["key", "value", "clinic_id"];
+    
+    protected static function eloquentDefaults(\\AdvancedClinic $clinic): array
+    {
+        return [
+            static::make(["key" => "theme", "value" => "light", "clinic_id" => $clinic->id]),
+            static::make(["key" => "locale", "value" => "en", "clinic_id" => $clinic->id]),
+        ];
+    }
+}');
+
+    return $testDir;
+}
+
+function cleanupBootTestModelFiles(): void
+{
+    $testDir = sys_get_temp_dir().'/eloquent-defaults-boot-test-models';
+
+    if (File::isDirectory($testDir)) {
+        File::deleteDirectory($testDir);
+    }
 }
