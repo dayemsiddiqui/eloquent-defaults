@@ -2,9 +2,9 @@
 
 namespace dayemsiddiqui\EloquentDefaults\Tests;
 
+use dayemsiddiqui\EloquentDefaults\EloquentDefaultsServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use dayemsiddiqui\EloquentDefaults\EloquentDefaultsServiceProvider;
 
 class TestCase extends Orchestra
 {
@@ -27,11 +27,62 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app)
     {
         config()->set('database.default', 'testing');
+        config()->set('database.connections.testing', [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+            'prefix' => '',
+        ]);
 
-        /*
-         foreach (\Illuminate\Support\Facades\File::allFiles(__DIR__ . '/database/migrations') as $migration) {
-            (include $migration->getRealPath())->up();
-         }
-         */
+        $this->setUpDatabase();
+    }
+
+    protected function setUpDatabase(): void
+    {
+        $schema = \Illuminate\Support\Facades\Schema::getFacadeRoot();
+
+        $schema->create('companies', function ($table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email');
+            $table->timestamps();
+        });
+
+        $schema->create('plans', function ($table) {
+            $table->id();
+            $table->foreignId('company_id')->constrained();
+            $table->string('name');
+            $table->integer('price');
+            $table->timestamps();
+        });
+
+        $schema->create('roles', function ($table) {
+            $table->id();
+            $table->foreignId('company_id')->constrained();
+            $table->string('name');
+            $table->string('permissions');
+            $table->timestamps();
+        });
+
+        $schema->create('charges', function ($table) {
+            $table->id();
+            $table->foreignId('company_id')->constrained();
+            $table->string('name');
+            $table->integer('amount');
+            $table->timestamps();
+        });
+
+        $schema->create('circular_model_as', function ($table) {
+            $table->id();
+            $table->unsignedBigInteger('circular_model_b_id')->nullable();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        $schema->create('circular_model_bs', function ($table) {
+            $table->id();
+            $table->unsignedBigInteger('circular_model_a_id')->nullable();
+            $table->string('name');
+            $table->timestamps();
+        });
     }
 }
