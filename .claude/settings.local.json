@@ -5,7 +5,9 @@
       "Bash(vendor/bin/pest:*)",
       "Bash(composer analyse:*)",
       "Bash(composer format:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }
