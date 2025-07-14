@@ -7,7 +7,8 @@
       "Bash(composer format:*)",
       "Bash(rm:*)",
       "Bash(git push:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

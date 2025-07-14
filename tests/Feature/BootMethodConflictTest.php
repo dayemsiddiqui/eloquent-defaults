@@ -267,8 +267,16 @@ it('handles models with boot method that does not call parent boot', function ()
     // Reset tracking
     BadBootClinic::$customBootCalled = false;
 
-    // Manually trigger boot for models with HasEloquentDefaults
-    Equipment::bootHasEloquentDefaults();
+    // Create temporary model files and use auto-discovery
+    $testDir = createBootTestModelFiles();
+    
+    // Load the model files so they're available for reflection
+    require_once $testDir . '/TestEquipment.php';
+    
+    // Use auto-discovery instead of manual calls
+    $scanner = app(ModelScannerService::class);
+    $scanner->setScanDirectories([$testDir]);
+    $scanner->discoverAndRegisterModels();
 
     // This test demonstrates what happens when parent::boot() is not called
     // It should throw an error when creating the model because trait initializers aren't set up
@@ -496,6 +504,27 @@ class TestClinicSetting extends Model
         return [
             static::make(["key" => "theme", "value" => "light", "clinic_id" => $clinic->id]),
             static::make(["key" => "locale", "value" => "en", "clinic_id" => $clinic->id]),
+        ];
+    }
+}');
+
+    // Create TestEquipment (provider model for BadBootClinic)
+    File::put($testDir . '/TestEquipment.php', '<?php
+namespace Tests\BootConflict;
+use Illuminate\Database\Eloquent\Model;
+use dayemsiddiqui\EloquentDefaults\Traits\HasEloquentDefaults;
+
+class TestEquipment extends Model
+{
+    use HasEloquentDefaults;
+    
+    protected $table = "equipment";
+    protected $fillable = ["name", "clinic_id"];
+    
+    protected static function eloquentDefaults(\\BadBootClinic $clinic): array
+    {
+        return [
+            static::make(["name" => "Default Stethoscope", "clinic_id" => $clinic->id]),
         ];
     }
 }');
